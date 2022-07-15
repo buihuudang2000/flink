@@ -1,0 +1,2 @@
+{"metric":{"name":"cpu.usage_guest","dimensions":{"cpu":"cpu-total","host":"lap14077-ThinkPad-T14-Gen-1"},"value":0,"timestamp":1652407812000,"value_meta":{}},"meta":{"region":"RegionOne","tenantId":"f6304a677e0c4da0b04487ee3ce77621"},"creation_time":1657766046824}
+{"metric":{"name":"system.n_cpus","dimensions":{"host":"lap14077-ThinkPad-T14-Gen-1"},"value":8,"timestamp":1652407812000,"value_meta":{}},"meta":{"region":"RegionOne","tenantId":"f6304a677e0c4da0b04487ee3ce77621"},"creation_time":1657766046824}
