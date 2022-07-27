@@ -14,21 +14,13 @@ import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 
 import java.io.*;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class DownloadService{
-    //    private static void displayTextInputStream(InputStream input) throws IOException
-//    {
-//        // Read one text line at a time and display.
-//        BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-//        while(true)
-//        {
-//            String line = reader.readLine();
-//            if(line == null) break;
-//            System.out.println( "    " + line );
-//        }
-//        System.out.println();
-//    }
+
     private static void displayTextInputStream(InputStream input) throws IOException {
         // Read one text line at a time and display.
         BufferedReader reader = new BufferedReader(new InputStreamReader(input));
@@ -42,54 +34,86 @@ public class DownloadService{
         System.out.println();
     }
 
-    public static String downloadFile() throws IOException {
+    public static String downloadFile(String region, String access_key, String secret_key, String host_base, Calendar cal) throws IOException {
 
-        AmazonS3 s3= AmazonS3Config.s3client();
-//            BucketWebsiteConfiguration config = s3.getBucketWebsiteConfiguration("portal.vngcloud.vn");
-//            S3Object s3object = s3.getObject("tunm4_metics.hcm01.vstorage.vngcloud.vn","dev/");
-//            GetObjectRequest rangeObjectRequest = new GetObjectRequest("dev", "test=1/1658188870=e681aa71-ebcf-4d2c-b9e2-fa192bf40f5b.log");
+        AmazonS3 s3= AmazonS3Config.s3client(region, access_key, secret_key, host_base);
 
-        ObjectListing objects= s3.listObjects("dev", "date=2022-07-21/hour=07");
-//            GetObjectRequest rangeObjectRequest = new GetObjectRequest("dev", "date=2022-07-21/hour=04/1658379847-fba24f81-0543-45f6-afce-f8607cea69be.log");
-//            S3Object objectPortion = s3.getObject(rangeObjectRequest);
-//
-//            System.out.println("Printing bytes retrieved:");
-//            displayTextInputStream(objectPortion.getObjectContent());
-
+        String prefix= "date=" + (new SimpleDateFormat("yyyy-MM-dd")).format(cal.getTime());
+        List<S3ObjectSummary> objectSummaries = s3.listObjects("dev", prefix).getObjectSummaries();
         String fileName = null;
-        List<S3ObjectSummary> objectSummaries = objects.getObjectSummaries();
+//        while (objectSummaries.size()!=0){
+            for (S3ObjectSummary objectSummary : objectSummaries) {
+                if (objectSummary.getKey().contains(".log")) {
 
+    //                fileName = URLEncoder.encode(objectSummary.getKey(), "UTF-8").replaceAll("\\+", "%20");
+                    fileName=objectSummary.getKey();
+
+                    GetObjectRequest rangeObjectRequest = new GetObjectRequest("dev", fileName);
+                    S3Object objectPortion = s3.getObject(rangeObjectRequest);
+
+                    System.out.println("Printing bytes retrieved:");
+                    displayTextInputStream(objectPortion.getObjectContent());
+                    System.out.println(fileName);
+                }
+            }
+
+
+        return s3.toString();
+
+    }
+
+    public static  List<S3Object>  hourPoint(String region, String access_key, String secret_key, String host_base, Calendar cal, String hour) throws IOException {
+
+        AmazonS3 s3= AmazonS3Config.s3client(region, access_key, secret_key, host_base);
+        List<S3Object> result= new ArrayList<>();
+        String prefix= "date=" + (new SimpleDateFormat("yyyy-MM-dd")).format(cal.getTime())+"/hour="+hour;
+        List<S3ObjectSummary> objectSummaries = s3.listObjects("dev", prefix).getObjectSummaries();
+        String fileName = null;
         for (S3ObjectSummary objectSummary : objectSummaries) {
             if (objectSummary.getKey().contains(".log")) {
 
-//                fileName = URLEncoder.encode(objectSummary.getKey(), "UTF-8").replaceAll("\\+", "%20");
+                //                fileName = URLEncoder.encode(objectSummary.getKey(), "UTF-8").replaceAll("\\+", "%20");
                 fileName=objectSummary.getKey();
+
                 GetObjectRequest rangeObjectRequest = new GetObjectRequest("dev", fileName);
                 S3Object objectPortion = s3.getObject(rangeObjectRequest);
-
-                System.out.println("Printing bytes retrieved:");
-                displayTextInputStream(objectPortion.getObjectContent());
+                result.add(objectPortion);
+//                System.out.println("Printing bytes retrieved:");
+//                displayTextInputStream(objectPortion.getObjectContent());
+                System.out.println(fileName);
             }
         }
 
-//        TransferManager tm = TransferManagerBuilder.standard()
-//                .withS3Client(s3)
-//                .build();
-//
-//        try {
-//            MultipleFileDownload download = tm.downloadDirectory(
-//                    "dev", "date=2022-07-20/hour=00", new File("/home/lap12949/Documents/fresher/tjava/flink-1.13.6/demo/output"));
-//            download.waitForCompletion();
-//            // loop with Transfer.isDone()
-//
-//            System.out.println("Download complete.");
-//        } catch (InterruptedException e) {
-//            throw new RuntimeException(e);
-//        }
-//        tm.shutdownNow();
-        return s3.toString();
-//            return "Hello";
+
+        return result;
+
     }
 
+    public static  List<S3Object>  dayPoint(String region, String access_key, String secret_key, String host_base, Calendar cal, String hour) throws IOException {
+        System.out.println("dayPonit");
+        AmazonS3 s3= AmazonS3Config.s3client(region, access_key, secret_key, host_base);
+        List<S3Object> result= new ArrayList<>();
+        String prefix= "date=" + (new SimpleDateFormat("yyyy-MM-dd")).format(cal.getTime());
+        List<S3ObjectSummary> objectSummaries = s3.listObjects("dev", prefix).getObjectSummaries();
+        String fileName = null;
+        for (S3ObjectSummary objectSummary : objectSummaries) {
+            if (objectSummary.getKey().contains(".log")) {
+
+                //                fileName = URLEncoder.encode(objectSummary.getKey(), "UTF-8").replaceAll("\\+", "%20");
+                fileName=objectSummary.getKey();
+
+                GetObjectRequest rangeObjectRequest = new GetObjectRequest("dev", fileName);
+                S3Object objectPortion = s3.getObject(rangeObjectRequest);
+                result.add(objectPortion);
+//                System.out.println("Printing bytes retrieved:");
+//                displayTextInputStream(objectPortion.getObjectContent());
+                System.out.println(fileName);
+            }
+        }
+
+
+        return result;
+
+    }
 
 }

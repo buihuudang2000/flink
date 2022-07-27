@@ -2,13 +2,21 @@ package jar;
 
 
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
+import com.amazonaws.services.s3.model.S3Object;
 import jar.service.DownloadService;
+import jar.service.ReadMetric;
+import jar.service.WriteToParquet;
+import jdk.nashorn.internal.parser.DateParser;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.aggregation.Aggregations;
 import org.apache.flink.api.java.operators.UnsortedGrouping;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple6;
 import org.apache.flink.api.java.tuple.Tuple8;
 import org.apache.flink.util.Collector;
 import org.apache.flink.api.java.DataSet;
@@ -16,6 +24,8 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
+
+import static jdk.jfr.internal.SecuritySupport.getResourceAsStream;
 
 
 public class WriteMetric {
@@ -183,26 +193,64 @@ public class WriteMetric {
             }
         }
     }
-//    public static List<Tuple5<String, Long, Double, String, JSONObject>> groupMetric(DataSet<Tuple5<String, Long, Double, String, JSONObject>> metrics){
-//        metrics.map(System.out.println(1);)
-//
-//    }
+
     public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-//        System.out.println(DownloadService.downloadFile());
-        List<String> metrics= readFile2(env);
-        if (metrics==null) return;
-        DataSet<Tuple5<String, Long, Double, String, String>> metricsCustom=convertToDataset(metrics, env);
-        System.out.println("metricCustom");
-//        DataSet<Tuple5<String, Long, Double, String, String>> temp= metricsCustom.union(metricsCustom);
-        long countmetric1= metricsCustom.count();
-        metricsCustom.print();
-        DataSet<Tuple5<String, Long, Double, String, String>> check= metricsCustom.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1);
-        System.out.println("check");
-        check.print();
 
-        long countmetric2= check.count();
-        System.out.println(countmetric2);
+//        Get variable form file
+        String currentDir = System.getProperty("user.dir");
+        InputStream is = new FileInputStream(currentDir+"/src/main/resources/log4j.properties");
+        Properties p = new Properties();
+        p.load(is);
+        String region = p.getProperty("region");
+        String access_key = p.getProperty("access_key");
+        String secret_key = p.getProperty("secret_key");
+        String host_base = p.getProperty("host_base");
+        String startDay=p.getProperty("startDay");
+        Date date= new SimpleDateFormat("yyyy-MM-dd").parse(startDay);
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        String mode = p.getProperty("Mode");
+        String hour = p.getProperty("startHour");
+
+//        Get file from S3
+        List<S3Object> objectPortionList= null;
+        if (mode.equals("Hour")){
+            objectPortionList=DownloadService.hourPoint(region,access_key,secret_key,host_base,cal,hour);
+        }
+        else {
+            objectPortionList=DownloadService.dayPoint(region,access_key,secret_key,host_base,cal,hour);
+        }
+        if (objectPortionList.size() == 0){
+            System.out.println("No data at "+hour+"h "+startDay);
+            return;
+        }
+        System.out.println(objectPortionList);
+        List<String> metrics;
+        DataSet<Tuple6<String, Long, Double, String, String, Integer>> metricsCustom ;
+//        System.out.println(objectPortionList.get(0));
+
+//      Read file and convert metrics to Dataset
+        metrics= ReadMetric.readFile(objectPortionList.get(0));
+        metricsCustom=ReadMetric.convertToDataset(metrics, env);
+        for (int i=1;i<objectPortionList.size();i++){
+            metrics= ReadMetric.readFile(objectPortionList.get(i));
+            if (metrics.size()==0) continue;
+            metricsCustom=metricsCustom.union(ReadMetric.convertToDataset(metrics, env));
+        }
+        long countmetric= metricsCustom.count();
+//        DataSet<Tuple6<String, Long, Double, String, String, Integer>> merge= metricsCustom.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
+//        long countmetricAfterMerge= merge.count();
+//        merge= merge.sortPartition(0,Order.ASCENDING).sortPartition(3,Order.ASCENDING);
+//        DataSet<Tuple2<String, String>> keyname= merge.project(0,3);
+//        keyname=keyname.distinct(0,1);
+//        long keynameCount= keyname.count();
+////        WriteToParquet.writeDatset2(merge,keyname,mode,startDay);
+//        WriteToParquet.writeDatasetToFile(merge,mode,startDay);
+////        keyname.print();
+        System.out.println(countmetric);
+//        System.out.println(countmetricAfterMerge);
+//        System.out.println(keynameCount);
 
     }
 }
