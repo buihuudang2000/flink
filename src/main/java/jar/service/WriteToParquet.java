@@ -195,7 +195,7 @@ public class WriteToParquet {
                 String a= createFolder(value, mode, startday, schemaString);
                 return a;
             }
-        }).setParallelism(1);
+        }).setParallelism(1).print();
     }
 
 

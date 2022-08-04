@@ -2,12 +2,16 @@ package jar;
 
 
 import java.io.*;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
+import jar.config.AmazonS3ConfigToUpload;
 import jar.service.DownloadService;
 import jar.service.ReadMetric;
+import jar.service.UploadService;
 import jar.service.WriteToParquet;
 import jdk.nashorn.internal.parser.DateParser;
 import org.apache.flink.api.common.functions.FlatMapFunction;
@@ -90,22 +94,42 @@ public class WriteMetric {
     }
     static void readFile(){
         try {
-            File myObj = new File("/home/lap12949/Documents/fresher/tjava/flink-1.13.6/flink-quickstart-java/src/main/java/jar/input.txt");
-//            File myObj = new File("/home/lap12949/Documents/fresher/final-project/writemetric/src/input/input.txt");
-            Scanner myReader = new Scanner(myObj);
-            String path="";
+//            File myObj = new File("/home/lap12949/Documents/fresher/tjava/flink-1.13.6/flink-quickstart-java/src/main/java/jar/input.txt");
+////            File myObj = new File("/home/lap12949/Documents/fresher/final-project/writemetric/src/input/input.txt");
+//            Scanner myReader = new Scanner(myObj);
+//            String path="";
 
-            while (myReader.hasNextLine()) {
-                String data = myReader.nextLine();
-                path=collectMetricToFile(data);
+            FileReader in = new FileReader("/home/lap12949/Documents/fresher/tjava/flink-1.13.6/flink-quickstart-java/src/main/java/jar/input.log");
+
+            char[] chars = new char[1000000];
+//            int n = in.read(chars, 0, chars.length);
+            String contents ="";
+            String data="";
+
+            while (true) {
+                int n= in.read(chars, 0, chars.length);
+                System.out.println(n);
+
+                if (n== -1)
+                    break;
+                if (n< chars.length)
+                    contents += new String(chars).substring(0,n);
+                    else
+                    contents +=  new String(chars);
+//            System.out.println("    " + line);
+
             }
-            writeFile(path, metricArray);
-            myReader.close();
+
+            System.out.println(contents);
+//            while (myReader.hasNextLine()) {
+//                String data = myReader.nextLine();
+//                path=collectMetricToFile(data);
+//            }
+//            writeFile(path, metricArray);
+//            myReader.close();
         } catch (FileNotFoundException e) {
             System.out.println("An error occurred.");
             e.printStackTrace();
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -193,8 +217,8 @@ public class WriteMetric {
             }
         }
     }
+    public static void convertDayMetrics() throws Exception {
 
-    public static void main(String[] args) throws Exception {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
 //        Get variable form file
@@ -212,14 +236,101 @@ public class WriteMetric {
         cal.setTime(date);
         String mode = p.getProperty("Mode");
         String hour = p.getProperty("startHour");
+//
+////        Get file from S3
+//        long countmetric=0;
+//        List<S3Object> objectPortionList;
+//        DataSet<Tuple6<String, Long, Double, String, String, Integer>> result=null;
+//        String[] hourLists= {"00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"};
+//        DataSet<Tuple6<String, Long, Double, String, String, Integer>> metricsCustom ;
+//        DataSet<Tuple6<String, Long, Double, String, String, Integer>> temp ;
+//        for (int i=0; i<24; i++){
+//            objectPortionList= DownloadService.hourPoint(region,access_key,secret_key,host_base,cal,hourLists[i]);
+//            if (objectPortionList.size() == 0) continue;
+//
+//            System.out.println(objectPortionList);
+//            List<String> metrics;
+//
+////        System.out.println(objectPortionList.get(0));
+//
+////      Read file and convert metrics to Dataset
+//            metrics= ReadMetric.readFile(objectPortionList.get(0));
+//            metricsCustom=ReadMetric.convertToDataset(metrics, env);
+//
+//            int objSize= objectPortionList.size();
+//            countmetric +=metricsCustom.count();
+//            for (int j=1;j<objectPortionList.size();j++){
+//                System.out.println("Hour=="+hourLists[i]);
+//                System.out.println(j);
+//                metrics= ReadMetric.readFile(objectPortionList.get(j));
+//                if (metrics.size()==0) continue;
+//                temp=ReadMetric.convertToDataset(metrics, env);
+//                countmetric += temp.count();
+//                metricsCustom=metricsCustom.union(temp);
+//                if (j%10 == 0) metricsCustom=metricsCustom.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
+//            }
+////        countmetric= metricsCustom.count();
+////            metricsCustom= metricsCustom.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
+//            if (result==null) result=metricsCustom;
+//            else result.union(metricsCustom);
+//            result= result.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
+//
+//            System.out.println(countmetric);
+//
+//        }
+////        DataSet<Tuple6<String, Long, Double, String, String, Integer>> result=metricCustomList.get(0) ;
+////        for (int i=1; i<metricCustomList.size();i++){
+////            result= result.union(metricCustomList.get(i));
+////            result= result.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
+////        }
+//        long countmetricAfterMerge= result.count();
+//        WriteToParquet.writeDatasetToFile(result,mode,startDay);
+        UploadService.UploadFile(mode,startDay);
+//        System.out.println(countmetric);
+//        System.out.println(countmetricAfterMerge);
 
+    }
+    public static void main(String[] args) throws Exception {
+//        File file = new File("/home/lap12949/Documents/fresher/tjava/flink-1.13.6/flink-quickstart-java/src/main/java/jar/input.log");
+//        AmazonS3ConfigToUpload.s3client().putObject(new PutObjectRequest("metrics-test-2807", "dev/dang.log", file));
+//        System.out.println(AmazonS3ConfigToUpload.s3client().toString());
+
+
+//        readFile();
+        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+
+//        Get variable form file
+        String currentDir = System.getProperty("user.dir");
+        InputStream is = new FileInputStream(currentDir+"/src/main/resources/log4j.properties");
+        Properties p = new Properties();
+        p.load(is);
+        String region = p.getProperty("region");
+        String access_key = p.getProperty("access_key");
+        String secret_key = p.getProperty("secret_key");
+        String host_base = p.getProperty("host_base");
+        String startDay=p.getProperty("startDay");
+        Date date= new SimpleDateFormat("yyyy-MM-dd").parse(startDay);
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        String mode = p.getProperty("Mode");
+        String hour = p.getProperty("startHour");
+        if (mode.equals("Day")){
+            convertDayMetrics();
+            return;
+        }
 //        Get file from S3
-        List<S3Object> objectPortionList= null;
+        List<S3Object> objectPortionList= new ArrayList<>();
         if (mode.equals("Hour")){
             objectPortionList=DownloadService.hourPoint(region,access_key,secret_key,host_base,cal,hour);
         }
         else {
-            objectPortionList=DownloadService.dayPoint(region,access_key,secret_key,host_base,cal,hour);
+            String[] hourLists= {"00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"};
+            for (int i=0; i<24; i++){
+                List<S3Object> objectPortionTemp= DownloadService.hourPoint(region,access_key,secret_key,host_base,cal,hourLists[i]);
+                if (objectPortionTemp.size() == 0) continue;
+                objectPortionList.addAll(objectPortionTemp);
+            }
+//            objectPortionList=DownloadService.dayPoint(region,access_key,secret_key,host_base,cal,hour);
         }
         if (objectPortionList.size() == 0){
             System.out.println("No data at "+hour+"h "+startDay);
@@ -228,29 +339,38 @@ public class WriteMetric {
         System.out.println(objectPortionList);
         List<String> metrics;
         DataSet<Tuple6<String, Long, Double, String, String, Integer>> metricsCustom ;
+        DataSet<Tuple6<String, Long, Double, String, String, Integer>> temp ;
 //        System.out.println(objectPortionList.get(0));
 
 //      Read file and convert metrics to Dataset
         metrics= ReadMetric.readFile(objectPortionList.get(0));
         metricsCustom=ReadMetric.convertToDataset(metrics, env);
+
+        int objSize= objectPortionList.size();
+        long countmetric=metricsCustom.count();
         for (int i=1;i<objectPortionList.size();i++){
+            System.out.println(i);
             metrics= ReadMetric.readFile(objectPortionList.get(i));
             if (metrics.size()==0) continue;
-            metricsCustom=metricsCustom.union(ReadMetric.convertToDataset(metrics, env));
+            temp=ReadMetric.convertToDataset(metrics, env);
+            countmetric += temp.count();
+            metricsCustom=metricsCustom.union(temp);
+            if (i%10 == 0) metricsCustom=metricsCustom.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
         }
-        long countmetric= metricsCustom.count();
-//        DataSet<Tuple6<String, Long, Double, String, String, Integer>> merge= metricsCustom.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
-//        long countmetricAfterMerge= merge.count();
+//        countmetric= metricsCustom.count();
+        DataSet<Tuple6<String, Long, Double, String, String, Integer>> merge= metricsCustom.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
+        long countmetricAfterMerge= merge.count();
 //        merge= merge.sortPartition(0,Order.ASCENDING).sortPartition(3,Order.ASCENDING);
 //        DataSet<Tuple2<String, String>> keyname= merge.project(0,3);
 //        keyname=keyname.distinct(0,1);
 //        long keynameCount= keyname.count();
-////        WriteToParquet.writeDatset2(merge,keyname,mode,startDay);
-//        WriteToParquet.writeDatasetToFile(merge,mode,startDay);
-////        keyname.print();
+//        WriteToParquet.writeDatset2(merge,keyname,mode,startDay);
+        WriteToParquet.writeDatasetToFile(merge,mode,startDay);
+//        keyname.print();
         System.out.println(countmetric);
-//        System.out.println(countmetricAfterMerge);
+        System.out.println(countmetricAfterMerge);
 //        System.out.println(keynameCount);
+//        UploadService.UploadFile(mode,startDay);
 
     }
 }

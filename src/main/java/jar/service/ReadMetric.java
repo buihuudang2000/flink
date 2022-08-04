@@ -25,6 +25,33 @@ public class ReadMetric {
         }
         return data;
     }
+    private static List<String> getTextInputStream2(InputStream input) throws IOException {
+        // Read one text line at a time and display.
+        BufferedReader in = new BufferedReader(new InputStreamReader(input));
+//        FileReader in = new FileReader("/home/lap12949/Documents/fresher/tjava/flink-1.13.6/flink-quickstart-java/src/main/java/jar/input.log");
+        List<String> contents=new ArrayList<>();
+        char[] chars = new char[1000000];
+//            int n = in.read(chars, 0, chars.length);
+//        String contents ="";
+        String data="";
+
+        while (true) {
+            int n= in.read(chars, 0, chars.length);
+            System.out.println(n);
+
+            if (n== -1)
+                break;
+            if (n< chars.length)
+                contents.add( new String(chars).substring(0,n));
+            else
+                contents.add( new String(chars));
+//            System.out.println("    " + line);
+
+        }
+
+//        System.out.println(contents);
+        return contents;
+    }
     public static DataSet<Tuple6<String, Long, Double, String, String, Integer>> convertToDataset(List<String> list, ExecutionEnvironment env){
         try {
             JSONObject json;
@@ -69,6 +96,41 @@ public class ReadMetric {
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+    }
+    public static List<String> readFile2(S3Object objectPortion){
+        try {
+
+            List<String> data=getTextInputStream2(objectPortion.getObjectContent());
+            List<String> myList=new ArrayList<>();
+//            System.out.println(data);
+            String preitem="";
+            List<String> myListTemp=new ArrayList<>();
+            for (int i=0; i<data.size();i++){
+                String item= data.get(i);
+                myListTemp= new ArrayList<String>(Arrays.asList(item.split("\"topic\":\"metrics\"}") ));
+                myListTemp.set(0,preitem+myListTemp.get(0));
+
+                preitem=myListTemp.get(myListTemp.size()-1);
+                myList.addAll(myListTemp.subList(0,myListTemp.size()-1));
+
+//                System.out.println(myList.get(myList.size()-1));
+            }
+            myList.add(myListTemp.get(myListTemp.size()-1));
+//            List<String> myList = new ArrayList<String>(Arrays.asList(data.split("\"topic\":\"metrics\"}") ));
+//            Collector<String> myList = new ArrayList<String>(Arrays.asList(data.split("\"topic\":\"metrics\"}") ));
+//            DataSet<List<String>> myList = env.fromElements(new ArrayList<String>(Arrays.asList(data.split("\"topic\":\"metrics\"}") )) );
+            int size = myList.size();
+//            myList.set(0, myList.get(0).substring(1));
+//            System.out.println(myList);
+            return myList;
+
+        } catch (FileNotFoundException e) {
+            System.out.println("An error occurred.");
+            e.printStackTrace();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
     }
     public static List<String> readFile(S3Object objectPortion){
         try {
