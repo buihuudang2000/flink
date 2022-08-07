@@ -9,7 +9,7 @@ import jar.config.AmazonS3Config;
 import com.amazonaws.services.s3.transfer.MultipleFileDownload;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-
+import jar.config.AmazonS3ConfigToDownload;
 
 
 import java.io.*;
@@ -34,40 +34,43 @@ public class DownloadService{
         System.out.println();
     }
 
-    public static String downloadFile(String region, String access_key, String secret_key, String host_base, Calendar cal) throws IOException {
+    public static List<GetObjectRequest>  downloadFile(String region, String access_key, String secret_key, String host_base, Calendar cal, String hour) throws IOException {
 
-        AmazonS3 s3= AmazonS3Config.s3client(region, access_key, secret_key, host_base);
-
-        String prefix= "date=" + (new SimpleDateFormat("yyyy-MM-dd")).format(cal.getTime());
-        List<S3ObjectSummary> objectSummaries = s3.listObjects("dev", prefix).getObjectSummaries();
+        AmazonS3 s3= AmazonS3ConfigToDownload.s3client();
+//        AmazonS3 s3= AmazonS3Config.s3client(region, access_key, secret_key, host_base);
+        List<GetObjectRequest> result= new ArrayList<>();
+        String prefix= "date=" + (new SimpleDateFormat("yyyy-MM-dd")).format(cal.getTime())+"/hour="+hour;
+        List<S3ObjectSummary> objectSummaries = s3.listObjects("tunm4-metics", prefix).getObjectSummaries();
         String fileName = null;
-//        while (objectSummaries.size()!=0){
-            for (S3ObjectSummary objectSummary : objectSummaries) {
-                if (objectSummary.getKey().contains(".log")) {
+//        System.out.println(objectSummaries.size());
+        for (S3ObjectSummary objectSummary : objectSummaries) {
+            if (objectSummary.getKey().contains(".log")) {
 
-    //                fileName = URLEncoder.encode(objectSummary.getKey(), "UTF-8").replaceAll("\\+", "%20");
-                    fileName=objectSummary.getKey();
+                //                fileName = URLEncoder.encode(objectSummary.getKey(), "UTF-8").replaceAll("\\+", "%20");
+                fileName=objectSummary.getKey();
 
-                    GetObjectRequest rangeObjectRequest = new GetObjectRequest("dev", fileName);
-                    S3Object objectPortion = s3.getObject(rangeObjectRequest);
-
-                    System.out.println("Printing bytes retrieved:");
-                    displayTextInputStream(objectPortion.getObjectContent());
-                    System.out.println(fileName);
-                }
+                GetObjectRequest rangeObjectRequest = new GetObjectRequest("tunm4-metics", fileName);
+//                S3Object objectPortion = s3.getObject(rangeObjectRequest);
+                result.add(rangeObjectRequest);
+//                objectPortion.close();
+//                System.out.println("Printing bytes retrieved:");
+//                displayTextInputStream(objectPortion.getObjectContent());
+                System.out.println(fileName);
             }
+        }
 
 
-        return s3.toString();
+        return result;
 
     }
 
     public static  List<S3Object>  hourPoint(String region, String access_key, String secret_key, String host_base, Calendar cal, String hour) throws IOException {
 
-        AmazonS3 s3= AmazonS3Config.s3client(region, access_key, secret_key, host_base);
+        AmazonS3 s3= AmazonS3ConfigToDownload.s3client();
+//        AmazonS3 s3= AmazonS3Config.s3client(region, access_key, secret_key, host_base);
         List<S3Object> result= new ArrayList<>();
         String prefix= "date=" + (new SimpleDateFormat("yyyy-MM-dd")).format(cal.getTime())+"/hour="+hour;
-        List<S3ObjectSummary> objectSummaries = s3.listObjects("dev", prefix).getObjectSummaries();
+        List<S3ObjectSummary> objectSummaries = s3.listObjects("tunm4-metics", prefix).getObjectSummaries();
         String fileName = null;
         for (S3ObjectSummary objectSummary : objectSummaries) {
             if (objectSummary.getKey().contains(".log")) {
@@ -75,9 +78,10 @@ public class DownloadService{
                 //                fileName = URLEncoder.encode(objectSummary.getKey(), "UTF-8").replaceAll("\\+", "%20");
                 fileName=objectSummary.getKey();
 
-                GetObjectRequest rangeObjectRequest = new GetObjectRequest("dev", fileName);
+                GetObjectRequest rangeObjectRequest = new GetObjectRequest("tunm4-metics", fileName);
                 S3Object objectPortion = s3.getObject(rangeObjectRequest);
                 result.add(objectPortion);
+                objectPortion.close();
 //                System.out.println("Printing bytes retrieved:");
 //                displayTextInputStream(objectPortion.getObjectContent());
                 System.out.println(fileName);

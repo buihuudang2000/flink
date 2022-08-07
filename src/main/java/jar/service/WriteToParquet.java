@@ -196,8 +196,100 @@ public class WriteToParquet {
                 return a;
             }
         }).setParallelism(1).print();
+
+
     }
+    public  static  GenericData.Record createRecord(Tuple6<String, Long, Double, String, String, Integer> value, String schemaString ){
+        final Schema schema = new Schema.Parser().parse(schemaString);
+        GenericData.Record record= new GenericData.Record(schema);
+        record.put("MetricName",value.getField(0));
+        record.put("TernentId",value.getField(0));
+        record.put("Timestamp",value.getField(1));
+        double a= value.getField(2);
+        int b= value.getField(5);
+        double temp= a/b;
+        record.put("Value",temp);
+        record.put("Dimensions",value.getField(4));
+//        System.err.println(record);
+        return record;
+    }
+    public static void writePoint02(List<GenericData.Record> records, String outputPath, String schemaString) throws IOException, JSONException {
 
+        final Schema schema = new Schema.Parser().parse(schemaString);
+        List<GenericData.Record> preData=  readParquet(outputPath);
+        try (ParquetWriter<GenericData.Record> writer = AvroParquetWriter
+                .<GenericData.Record>builder(new Path(outputPath))
+                .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
+                .withCompressionCodec(CompressionCodecName.SNAPPY)
+                .withConf(new Configuration())
+                .withSchema(schema)
+                .build()) {
+            for (GenericData.Record item: preData ){
+                writer.write(item);
+            }
+            for (GenericData.Record item: records ){
+                writer.write(item);
+            }
+        }
 
+    }
+    static String createFolder02(Tuple6<String, Long, Double, String, String, Integer> item, String mode, String startDay, String schemaString) throws JSONException, IOException {
+
+        String[] temp= startDay.split("-");
+        String dir = "/home/lap12949/Documents/fresher/tjava/flink-1.13.6/flink-quickstart-java/src/main/java/output/v1/"+temp[0]+"/"+ mode;
+        File path = new File(dir);
+        if (!path.exists()) {
+            path.mkdir();
+        }
+
+        String namefile= dir+"/"+temp[1]+".parquet";
+//        System.err.println(namefile);
+
+//        writePoint02(item, namefile, schemaString);
+        return namefile;
+    }
+    public static void writeDatasetToFile02(DataSet<Tuple6<String, Long, Double, String, String, Integer>> data, String mode, String startDay) throws Exception {
+        System.out.println("writeDatasetToFile");
+        String schemaString= "{\n" +
+                "  \"type\": \"record\",\n" +
+                "\"namespace\": \"avroschema\",\n" +
+                "\"name\": \"Metrics\","+
+                "\"fields\": [\n" +
+                "{\"name\": \"MetricName\", \"type\": \"string\"},\n" +
+                "{\"name\": \"TernentId\", \"type\": \"string\"},\n" +
+                "{\"name\": \"Timestamp\", \"type\": \"long\"},\n" +
+                "{\"name\": \"Value\", \"type\": \"double\"},\n" +
+                "{\"name\": \"Dimensions\", \"type\": \"string\"}\n" +
+                "]"+
+                "}";
+
+        String[] temp= startDay.split("-");
+        String dir = "/home/lap12949/Documents/fresher/tjava/flink-1.13.6/flink-quickstart-java/src/main/java/output/v1/"+temp[0]+"/"+ mode;
+        File path = new File(dir);
+        if (!path.exists()) {
+            path.mkdir();
+        }
+
+        String namefile= dir+"/"+temp[2]+"-"+temp[1]+".parquet";
+
+        List<GenericData.Record> result = data.map(new MapFunction<Tuple6<String, Long, Double, String, String, Integer>, GenericData.Record>() {
+            public GenericData.Record map(Tuple6<String, Long, Double, String, String, Integer> value) throws JSONException, IOException {
+//                String a= createFolder02(value, mode, startday, schemaString);
+                final Schema schema = new Schema.Parser().parse(schemaString);
+                GenericData.Record record= new GenericData.Record(schema);
+                record.put("MetricName",value.getField(0));
+                record.put("TernentId",value.getField(0));
+                record.put("Timestamp",value.getField(1));
+                double a= value.getField(2);
+                int b= value.getField(5);
+                double temp= a/b;
+                record.put("Value",temp);
+                record.put("Dimensions",value.getField(4));
+                return record;
+            }
+        }).collect();
+
+        writePoint02(result, namefile, schemaString);
+    }
 
 }

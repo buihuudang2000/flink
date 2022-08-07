@@ -1,6 +1,9 @@
 package jar.service;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
+import jar.config.AmazonS3ConfigToDownload;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple5;
@@ -142,6 +145,29 @@ public class ReadMetric {
 //            Collector<String> myList = new ArrayList<String>(Arrays.asList(data.split("\"topic\":\"metrics\"}") ));
 //            DataSet<List<String>> myList = env.fromElements(new ArrayList<String>(Arrays.asList(data.split("\"topic\":\"metrics\"}") )) );
             int size = myList.size();
+//            myList.set(0, myList.get(0).substring(1));
+
+            return myList;
+
+        } catch (FileNotFoundException e) {
+            System.out.println("An error occurred.");
+            e.printStackTrace();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+    public static List<String> readFile02(GetObjectRequest rangeObjectRequest){
+        try {
+            AmazonS3 s3= AmazonS3ConfigToDownload.s3client();
+            S3Object objectPortion = s3.getObject(rangeObjectRequest);
+            String data=getTextInputStream(objectPortion.getObjectContent());
+//            System.out.println(data);
+            objectPortion.close();
+            List<String> myList = new ArrayList<String>(Arrays.asList(data.split("\"topic\":\"metrics\"}") ));
+//            Collector<String> myList = new ArrayList<String>(Arrays.asList(data.split("\"topic\":\"metrics\"}") ));
+//            DataSet<List<String>> myList = env.fromElements(new ArrayList<String>(Arrays.asList(data.split("\"topic\":\"metrics\"}") )) );
+//            int size = myList.size();
 //            myList.set(0, myList.get(0).substring(1));
 
             return myList;
