@@ -203,7 +203,7 @@ public class WriteToParquet {
         final Schema schema = new Schema.Parser().parse(schemaString);
         GenericData.Record record= new GenericData.Record(schema);
         record.put("MetricName",value.getField(0));
-        record.put("TernentId",value.getField(0));
+        record.put("TenantId",value.getField(0));
         record.put("Timestamp",value.getField(1));
         double a= value.getField(2);
         int b= value.getField(5);
@@ -256,7 +256,7 @@ public class WriteToParquet {
                 "\"name\": \"Metrics\","+
                 "\"fields\": [\n" +
                 "{\"name\": \"MetricName\", \"type\": \"string\"},\n" +
-                "{\"name\": \"TernentId\", \"type\": \"string\"},\n" +
+                "{\"name\": \"TenantId\", \"type\": \"string\"},\n" +
                 "{\"name\": \"Timestamp\", \"type\": \"long\"},\n" +
                 "{\"name\": \"Value\", \"type\": \"double\"},\n" +
                 "{\"name\": \"Dimensions\", \"type\": \"string\"}\n" +
@@ -278,7 +278,7 @@ public class WriteToParquet {
                 final Schema schema = new Schema.Parser().parse(schemaString);
                 GenericData.Record record= new GenericData.Record(schema);
                 record.put("MetricName",value.getField(0));
-                record.put("TernentId",value.getField(0));
+                record.put("TenantId",value.getField(3));
                 record.put("Timestamp",value.getField(1));
                 double a= value.getField(2);
                 int b= value.getField(5);

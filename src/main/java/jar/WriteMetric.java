@@ -4,6 +4,7 @@ package jar;
 import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.*;
 
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -237,6 +238,7 @@ public class WriteMetric {
         cal.setTime(date);
         String mode = p.getProperty("Mode");
         String hour = p.getProperty("startHour");
+        long timestampForItem= Instant.parse( startDay+"T00:00:00Z" ).getEpochSecond()*1000;
 //
 //        Get file from S3
         long countmetric=0;
@@ -256,7 +258,7 @@ public class WriteMetric {
 
 //      Read file and convert metrics to Dataset
             metrics= ReadMetric.readFile02(objectPortionList.get(0));
-            metricsCustom=ReadMetric.convertToDataset(metrics, env);
+            metricsCustom=ReadMetric.convertToDataset(metrics, env, timestampForItem);
 
             int objSize= objectPortionList.size();
             countmetric +=metricsCustom.count();
@@ -265,7 +267,7 @@ public class WriteMetric {
                 System.out.println(j);
                 metrics= ReadMetric.readFile02(objectPortionList.get(j));
                 if (metrics.size()==0) continue;
-                temp=ReadMetric.convertToDataset(metrics, env);
+                temp=ReadMetric.convertToDataset(metrics, env, timestampForItem);
                 countmetric += temp.count();
                 metricsCustom=metricsCustom.union(temp);
                 if (j%10 == 0) metricsCustom=metricsCustom.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
@@ -284,10 +286,13 @@ public class WriteMetric {
 //            result= result.union(metricCustomList.get(i));
 //            result= result.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
 //        }
-        long countmetricAfterMerge= result.count();
+        long countmetricAfterMerge= 0;
+        if (result!= null) countmetricAfterMerge=result.count();
         WriteToParquet.writeDatasetToFile02(result,mode,startDay);
         UploadService.UploadFile02(mode,startDay);
+        System.out.print("Metric count = ");
         System.out.println(countmetric);
+        System.out.print("Metric count after merge= ");
         System.out.println(countmetricAfterMerge);
 
     }
@@ -310,6 +315,12 @@ public class WriteMetric {
         String mode = p.getProperty("Mode");
         String hour = p.getProperty("startHour");
 
+        long timestampForItem= Instant.parse( startDay+"T"+hour+":00:00Z" ).getEpochSecond()*1000;
+//        System.out.println(timestampForItem);
+//        System.out.println(startDay+" "+hour+":00:00");
+//        if (mode.equals("Hour")) return;
+
+
 //        Get file from S3
         List<GetObjectRequest> objectPortionList= new ArrayList<>();
 
@@ -328,7 +339,7 @@ public class WriteMetric {
 
 //      Read file and convert metrics to Dataset
         metrics= ReadMetric.readFile02(objectPortionList.get(0));
-        metricsCustom=ReadMetric.convertToDataset(metrics, env);
+        metricsCustom=ReadMetric.convertToDataset(metrics, env, timestampForItem);
 
         int objSize= objectPortionList.size();
         long countmetric=metricsCustom.count();
@@ -336,7 +347,7 @@ public class WriteMetric {
             System.out.println(i);
             metrics= ReadMetric.readFile02(objectPortionList.get(i));
             if (metrics.size()==0) continue;
-            temp=ReadMetric.convertToDataset(metrics, env);
+            temp=ReadMetric.convertToDataset(metrics, env, timestampForItem);
             countmetric += temp.count();
             metricsCustom=metricsCustom.union(temp);
             if (i%10 == 0) metricsCustom=metricsCustom.groupBy(0,3,4).aggregate(Aggregations.SUM,2).and(Aggregations.MIN,1).and(Aggregations.SUM,5);
@@ -347,7 +358,9 @@ public class WriteMetric {
         System.out.println("Metrics completed");
         WriteToParquet.writeDatasetToFile02(merge,mode,startDay);
         UploadService.UploadFile02(mode,startDay);
+        System.out.print("Metric count = ");
         System.out.println(countmetric);
+        System.out.print("Metric count after merge= ");
         System.out.println(countmetricAfterMerge);
 
     }

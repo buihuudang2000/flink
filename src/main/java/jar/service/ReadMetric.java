@@ -55,7 +55,7 @@ public class ReadMetric {
 //        System.out.println(contents);
         return contents;
     }
-    public static DataSet<Tuple6<String, Long, Double, String, String, Integer>> convertToDataset(List<String> list, ExecutionEnvironment env){
+    public static DataSet<Tuple6<String, Long, Double, String, String, Integer>> convertToDataset(List<String> list, ExecutionEnvironment env, long timestampForItem){
         try {
             JSONObject json;
             JSONObject dimensionsJson;
@@ -87,11 +87,12 @@ public class ReadMetric {
                     //now name contains the firstname, and so on...
                 }
                 dimensions=dimensions.substring(0,dimensions.length()-1);
-//                System.out.println(dimensions);
+                System.out.println(dimensions);
 //
 //                System.out.println(tenantId);
 //                System.out.println(json);
-                arr.add(new Tuple6<String, Long, Double, String, String, Integer>(json.getString("name"),json.getLong("timestamp"),json.getDouble("value"),tenantId,dimensions,1));
+                arr.add(new Tuple6<String, Long, Double, String, String, Integer>(json.getString("name"),timestampForItem,json.getDouble("value"),tenantId,dimensions,1));
+//                arr.add(new Tuple6<String, Long, Double, String, String, Integer>(json.getString("name"),json.getLong("timestamp"),json.getDouble("value"),tenantId,dimensions,1));
 
             }
             DataSet<Tuple6<String, Long, Double, String, String, Integer>> data= env.fromCollection(arr);
